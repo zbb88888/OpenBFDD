@@ -923,8 +923,10 @@ void Session::send(const BfdPacket &packet)
 
   logPacketContents(packet, true, false, m_remoteAddr, 0, m_localAddr, m_sendPort);
 
+  uint16_t destPort = m_beacon->IsMultiHop() ? bfd::MultiHopListenPort : bfd::ListenPort;
+
   if (m_sendSocket.SendTo(&packet, packet.header.length,
-                          SockAddr(m_remoteAddr, bfd::ListenPort),
+                          SockAddr(m_remoteAddr, destPort),
                           MSG_NOSIGNAL))
     gLog.Optional(Log::Packet, "Sent control packet for session %u.", m_id);
 }

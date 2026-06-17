@@ -41,7 +41,15 @@ public:
    *
    * @return - false on failure
    */
-  bool Run(const std::list<SockAddr> &controlPorts, const std::list<IpAddr> &listenAddrs);
+  bool Run(const std::list<SockAddr> &controlPorts, const std::list<IpAddr> &listenAddrs, bool multiHop = false);
+
+  /**
+   * True if the beacon is running in RFC 5883 multi-hop mode (listen/send on
+   * port 4784 and skip the single-hop TTL=255 GTSM check).
+   *
+   * @Note can be called from any thread; value is fixed once Run() is called.
+   */
+  bool IsMultiHop() const { return m_multiHop; }
 
   typedef void (*OperationCallback)(Beacon *beacon, void *userdata);
 
@@ -265,6 +273,7 @@ private:
   std::set<IpAddr, IpAddr::LessClass> m_allowedPassiveIP;
   bool m_allowAnyPassiveIP;
   bool m_strictPorts; // Should incoming ports be limited as described in draft-ietf-bfd-v4v6-1hop-11.txt
+  bool m_multiHop; // RFC 5883 multi-hop mode: listen/send on port 4784 and skip the single-hop TTL check.
   Session::InitialParams m_initialSessionParams;
 
   // These items are set at startup, so no locking is needed.

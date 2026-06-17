@@ -25,6 +25,97 @@ of its BFD sessions.
 
 
 ================
++ Build
+================
+
+OpenBFDD uses the GNU autotools build system. From the source directory:
+
+    ./autogen.sh        # generate the configure script (needs autoconf/automake)
+    ./configure         # detect the toolchain and create the Makefile
+    make                # build bfdd-beacon and bfdd-control
+
+Useful configure options:
+
+    ./configure --help                 # list all options
+    ./configure --enable-debug         # build with extra debug checks (BFD_DEBUG)
+
+The build produces two binaries in the source directory:
+
+    bfdd-beacon         # the BFD daemon
+    bfdd-control        # the control/configuration utility
+
+To install them system wide:
+
+    sudo make install
+
+
+================
++ Run
+================
+
+Start the daemon (single-hop mode, the default). It listens for BFD
+control packets on UDP port 3784:
+
+    sudo ./bfdd-beacon --listen=0.0.0.0
+
+Common bfdd-beacon options:
+
+    --listen=<ip>       # address to listen on; 0.0.0.0 / :: means all
+    --control=<ip:port> # control channel; may be repeated
+    --nofork            # run in the foreground (do not daemonize)
+    --multihop          # RFC 5883 multi-hop mode (see below)
+
+Once the daemon is running, use bfdd-control to drive it:
+
+    ./bfdd-control connect <localIP> <remoteIP>   # start an active session
+    ./bfdd-control allow <remoteIP>               # accept a passive session
+    ./bfdd-control status                         # show all sessions
+    ./bfdd-control session <id> set ...           # change session parameters
+
+Multi-hop mode (RFC 5883):
+
+By default bfdd-beacon runs in single-hop mode (RFC 5881): it uses UDP
+port 3784 and requires received packets to have a TTL/Hop Limit of 255
+(the GTSM anti-spoofing check). Passing --multihop switches the whole
+instance to multi-hop mode:
+
+    sudo ./bfdd-beacon --listen=0.0.0.0 --multihop
+
+In multi-hop mode all sessions listen and send on UDP port 4784, and the
+TTL/Hop Limit check is not applied (it does not work across multiple hops).
+The bfdd-control commands are unchanged. A single bfdd-beacon instance uses
+one mode for all of its sessions; single-hop and multi-hop sessions can not
+be mixed in the same instance. The remote peer (router/switch) must be
+configured for the matching mode and port, or no session will come up.
+
+
+================
++ Test
+================
+
+A local smoke test is provided to verify the single-hop and multi-hop
+packet paths on a single host using loopback alias addresses:
+
+    sudo ./tests/smoke-multihop.sh
+
+It starts two bfdd-beacon instances, opens sessions between them, and uses
+tcpdump to confirm that single-hop traffic uses port 3784 and multi-hop
+traffic (with --multihop) uses port 4784, and that the sessions reach the
+Up state. It prints "ALL CHECKS PASSED" on success.
+
+Requirements: Linux, root (to add loopback aliases and capture traffic),
+tcpdump, and the built bfdd-beacon / bfdd-control binaries. The binary and
+address defaults can be overridden with environment variables, for example:
+
+    sudo BEACON=./bfdd-beacon CONTROL=./bfdd-control UP_TIMEOUT=20 \
+        ./tests/smoke-multihop.sh
+
+Note: this is a control-plane smoke test on a single host. It validates the
+daemon's port/TTL behaviour only; it does not validate the real network path
+to an external router or switch.
+
+
+================
 + License
 ================
 

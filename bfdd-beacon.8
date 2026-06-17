@@ -25,6 +25,15 @@ Logging will not be sent to stdout. This is the default for release builds.
 .B --nofork
 Prevents the beacon from running as a daemon. This is useful for debugging.
 .TP
+.B --multihop
+Runs the beacon in RFC 5883 (BFD for Multihop Paths) mode. In this mode all
+sessions listen for and send control packets on UDP port 4784 instead of the
+single-hop port 3784, and the single-hop TTL/hop-limit of 255 check (RFC 5881
+GTSM) is not enforced on received packets. This is a global switch: every
+session on this instance uses multi-hop mode, and single-hop and multi-hop
+sessions can not be mixed in the same instance. The remote peer must be
+configured for the matching mode and port.
+.TP
 .B --control=\fIip\fB:\fIport\fR
 Adds a communication channel to use for communicating with \fBbfdd-beacon\fR(8). 
 \fIip\fR may be an IPv4 or Ipv6 address. A \fIport\fR must be supplied.

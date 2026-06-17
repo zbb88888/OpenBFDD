@@ -27,6 +27,7 @@ Beacon::Beacon() :
    m_sourceMap(32),
    m_allowAnyPassiveIP(false),
    m_strictPorts(false),
+   m_multiHop(false),
    m_initialSessionParams(),
    m_selfSignalId(-1),
    m_paramsLock(true),
@@ -69,13 +70,15 @@ void closeListenCallbackDataList(ListenCallbackDataList *callbackList)
   delete callbackList;
 }
 
-bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenAddrs)
+bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenAddrs, bool multiHop)
 {
   if (m_scheduler != NULL)
   {
     gLog.LogError("Can not call Beacon::Run twice. Aborting.");
     return false;
   }
+
+  m_multiHop = multiHop;
 
   if (controlPorts.empty())
   {
@@ -125,7 +128,7 @@ bool Beacon::Run(const list<SockAddr> &controlPorts, const list<IpAddr> &listenA
     makeListenSocket(*it, data->socket);
     if (data->socket.empty())
     {
-      gLog.LogError("Failed to create listen socket for %s on BFD port %hd.", it->ToString(), bfd::ListenPort);
+      gLog.LogError("Failed to create listen socket for %s on BFD port %hd.", it->ToString(), m_multiHop ? bfd::MultiHopListenPort : bfd::ListenPort);
       return false;
     }
     if (!m_scheduler->SetSocketCallback(data->socket, handleListenSocketCallback, data))
@@ -420,14 +423,16 @@ void Beacon::makeListenSocket(const IpAddr &listenAddr, Socket &outSocket)
       return;
   }
 
-  if (!listenSocket.Bind(SockAddr(listenAddr, bfd::ListenPort)))
+  uint16_t listenPort = m_multiHop ? bfd::MultiHopListenPort : bfd::ListenPort;
+
+  if (!listenSocket.Bind(SockAddr(listenAddr, listenPort)))
     return;
 
   // Take ownership
   outSocket.Transfer(listenSocket);
   outSocket.SetLogName(listenSocket.LogName());
 
-  gLog.Optional(Log::App, "Listening for BFD connections on %s", SockAddr(listenAddr, bfd::ListenPort).ToString());
+  gLog.Optional(Log::App, "Listening for %s BFD connections on %s", m_multiHop ? "multi-hop" : "single-hop", SockAddr(listenAddr, listenPort).ToString());
 }
 
 void Beacon::handleListenSocket(Socket &socket)
@@ -480,8 +485,9 @@ void Beacon::handleListenSocket(Socket &socket)
     }
   }
 
-  // TTL assumes that all control packets are from neighbors.
-  if (ttl != 255)
+  // TTL assumes that all control packets are from neighbors (RFC 5881 GTSM).
+  // This check does not apply to multi-hop sessions (RFC 5883 section 3).
+  if (!m_multiHop && ttl != 255)
   {
     gLog.Optional(Log::Discard, "Discard packet: bad ttl/hops %hhu", ttl);
     return;

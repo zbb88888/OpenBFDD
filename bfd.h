@@ -18,6 +18,7 @@ const uint16_t MaxAuthDataSize = 26; // Keyed SHA1 is the biggest at 26 bytes?
 const uint16_t AuthHeaderSize = 2; // just the "fixed" info.
 const uint16_t MaxPacketSize = (BasePacketSize + MaxAuthDataSize + AuthHeaderSize);
 const uint16_t ListenPort = 3784;
+const uint16_t MultiHopListenPort = 4784; // Per RFC 5883 (BFD for Multihop Paths)
 const uint8_t TTLValue = 255;
 const uint16_t MinSourcePort = 49142U;  // Per draft-ietf-bfd-v4v6-1hop-11.txt
 const uint16_t MaxSourcePort = 65535U;  // Per draft-ietf-bfd-v4v6-1hop-11.txt

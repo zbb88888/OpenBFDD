@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
   bool tee = false;
   bool doFork = true;
   int argIndex;
+  bool multiHop = false;
   list<SockAddr> controlPorts;
   list<IpAddr> listenAddrs;
   const char *valueString;
@@ -43,6 +44,10 @@ int main(int argc, char *argv[])
     else if (0 == strcmp("--nofork", argv[argIndex]))
     {
       doFork = false;
+    }
+    else if (0 == strcmp("--multihop", argv[argIndex]))
+    {
+      multiHop = true;
     }
     else if (0 == strcmp("--version", argv[argIndex]))
     {
@@ -140,7 +145,7 @@ int main(int argc, char *argv[])
   gLog.LogToSyslog("bfdd-beacon", tee);
   gLog.Message(Log::App, "Started %d", getpid());
 
-  ret = app.Run(controlPorts, listenAddrs);
+  ret = app.Run(controlPorts, listenAddrs, multiHop);
 
   gLog.Message(Log::App, "Shutdown %d", getpid());
 
